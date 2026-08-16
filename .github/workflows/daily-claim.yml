@@ -1,0 +1,42 @@
+name: HoYoLAB Daily Check-In
+
+on:
+  schedule:
+    # Runs everyday at 06:00 UTC (14:00 UTC+8 / 22:00 PST)
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub web UI
+
+jobs:
+  daily-claim:
+    name: Claim Daily Rewards
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run Daily Check-In
+        env:
+          HOYOLAB_CONFIG_JSON: ${{ secrets.HOYOLAB_CONFIG_JSON }}
+          HOYOLAB_TOKEN: ${{ secrets.HOYOLAB_TOKEN }}
+          HOYOLAB_ACCOUNT_NAME: ${{ secrets.HOYOLAB_ACCOUNT_NAME }}
+          HOYOLAB_GAMES: ${{ secrets.HOYOLAB_GAMES }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_PING_USER_ID: ${{ secrets.DISCORD_PING_USER_ID }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          SMTP_FROM: ${{ secrets.SMTP_FROM }}
+          SMTP_TO: ${{ secrets.SMTP_TO }}
+        run: bun run start

@@ -1,0 +1,9 @@
+services:
+  hoyolab-daily-claim:
+    build: .
+    container_name: hoyolab-auto-dailyclaim
+    restart: "no"
+    volumes:
+      - ./config.json:/app/config.json:ro
+    env_file:
+      - .env
