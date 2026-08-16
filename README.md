@@ -242,6 +242,13 @@ bun run typecheck
 
 ---
 
+## 🤖 Developer & Agent Documentation
+
+- **[AGENTS.md](AGENTS.md)**: Architecture guidelines, coding standards, and workflow instructions for AI agents and human contributors.
+- **[CLAUDE.md](CLAUDE.md)**: Concise quick-reference instructions for Claude / LLM assistants.
+
+---
+
 ## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
