@@ -64,25 +64,51 @@ export function validateAccountProfile(profile: unknown, index: number): Account
   }
 
   const raw = profile as Record<string, unknown>;
-  const accountName = typeof raw.accountName === 'string' && raw.accountName.trim()
-    ? raw.accountName.trim()
-    : `Account #${index + 1}`;
+  const accountName =
+    typeof raw.accountName === 'string' && raw.accountName.trim()
+      ? raw.accountName.trim()
+      : `Account #${index + 1}`;
 
-  const rawToken = typeof raw.token === 'string' ? raw.token : '';
-  const token = normalizeCookieString(rawToken);
+  let ltoken_v2 = typeof raw.ltoken_v2 === 'string' ? raw.ltoken_v2.trim() : undefined;
+  let ltuid_v2 =
+    typeof raw.ltuid_v2 === 'string' || typeof raw.ltuid_v2 === 'number'
+      ? String(raw.ltuid_v2).trim()
+      : undefined;
+
+  let token = '';
+
+  // 1. If explicit separate ltoken_v2 and ltuid_v2 are provided
+  if (ltoken_v2 && ltuid_v2) {
+    // If user included "ltoken_v2=" or "ltuid_v2=" inside the value, clean it up
+    if (ltoken_v2.startsWith('ltoken_v2=')) ltoken_v2 = ltoken_v2.slice(10).trim();
+    if (ltuid_v2.startsWith('ltuid_v2=')) ltuid_v2 = ltuid_v2.slice(9).trim();
+
+    token = `ltoken_v2=${ltoken_v2}; ltuid_v2=${ltuid_v2};`;
+  } else {
+    // 2. Otherwise fallback to raw 'token' / 'cookie' string
+    const rawToken = typeof raw.token === 'string' ? raw.token : typeof raw.cookie === 'string' ? raw.cookie : '';
+    token = normalizeCookieString(rawToken);
+
+    // Try extracting ltoken_v2 / ltuid_v2 if present
+    const ltokenMatch = token.match(/ltoken_v2=([^;]+)/);
+    const ltuidMatch = token.match(/ltuid_v2=([^;]+)/);
+    if (ltokenMatch && ltokenMatch[1]) ltoken_v2 = ltokenMatch[1].trim();
+    if (ltuidMatch && ltuidMatch[1]) ltuid_v2 = ltuidMatch[1].trim();
+  }
 
   if (!token) {
-    throw new ConfigError(`Profile "${accountName}" is missing a valid 'token' (cookies).`);
+    throw new ConfigError(
+      `Profile "${accountName}" is missing credentials. Please provide "ltoken_v2" and "ltuid_v2" (or "token").`
+    );
   }
 
   const hasV2 = token.includes('ltoken_v2=') && token.includes('ltuid_v2=');
   const hasV1 = token.includes('ltoken=') && token.includes('ltuid=');
 
   if (!hasV2 && !hasV1) {
-    // Check if at least one token cookie is present
     if (!token.includes('ltoken') && !token.includes('cookie_token') && !token.includes('account_mid_v2')) {
       throw new ConfigError(
-        `Profile "${accountName}" token does not appear to contain valid HoYoLAB cookies (expected ltoken_v2 / ltuid_v2).`
+        `Profile "${accountName}" credentials do not appear to contain valid HoYoLAB cookies (expected ltoken_v2 and ltuid_v2).`
       );
     }
   }
@@ -128,6 +154,8 @@ export function validateAccountProfile(profile: unknown, index: number): Account
 
   return {
     accountName,
+    ltoken_v2,
+    ltuid_v2,
     token,
     games,
     genshin: games.genshin ?? false,
@@ -274,7 +302,8 @@ export function validateAppConfig(rawConfig: unknown): AppConfig {
   }
 
   const retryCount = typeof raw.retryCount === 'number' && raw.retryCount >= 0 ? raw.retryCount : 2;
-  const requestTimeoutMs = typeof raw.requestTimeoutMs === 'number' && raw.requestTimeoutMs > 0 ? raw.requestTimeoutMs : 10000;
+  const requestTimeoutMs =
+    typeof raw.requestTimeoutMs === 'number' && raw.requestTimeoutMs > 0 ? raw.requestTimeoutMs : 10000;
   const fetchRewardDetails = typeof raw.fetchRewardDetails === 'boolean' ? raw.fetchRewardDetails : true;
 
   const discord = validateDiscordConfig(raw.discord);

@@ -11,8 +11,9 @@ export interface LoadConfigOptions {
 
 export async function loadConfig(options: LoadConfigOptions = {}): Promise<AppConfig> {
   const cwd = options.cwd ?? process.cwd();
+  const envConfig = buildConfigFromEnv();
 
-  // 1. Try explicit path if provided
+  // 1. Explicit path if provided
   if (options.configPath) {
     const explicitPath = resolve(cwd, options.configPath);
     if (!existsSync(explicitPath)) {
@@ -23,26 +24,30 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<AppCo
     const content = await file.text();
     try {
       const parsed = JSON.parse(content);
-      return validateAppConfig(parsed);
+      const merged = mergeWithEnv(parsed, envConfig);
+      return validateAppConfig(merged);
     } catch (e: unknown) {
       if (e instanceof ConfigError) throw e;
-      throw new ConfigError(`Failed to parse config file "${explicitPath}": ${e instanceof Error ? e.message : String(e)}`);
+      throw new ConfigError(
+        `Failed to parse config file "${explicitPath}": ${e instanceof Error ? e.message : String(e)}`
+      );
     }
   }
 
-  // 2. Check for HOYOLAB_CONFIG_JSON environment variable (great for CI/CD like GitHub Actions)
+  // 2. HOYOLAB_CONFIG_JSON environment variable (great for CI/CD like GitHub Actions)
   if (process.env.HOYOLAB_CONFIG_JSON) {
     logger.info('Loading configuration from HOYOLAB_CONFIG_JSON environment variable');
     try {
       const parsed = JSON.parse(process.env.HOYOLAB_CONFIG_JSON);
-      return validateAppConfig(parsed);
+      const merged = mergeWithEnv(parsed, envConfig);
+      return validateAppConfig(merged);
     } catch (e: unknown) {
       if (e instanceof ConfigError) throw e;
       throw new ConfigError(`Invalid JSON in HOYOLAB_CONFIG_JSON: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
-  // 3. Try standard config.json in working directory
+  // 3. Standard config.json in working directory
   const defaultConfigPath = resolve(cwd, 'config.json');
   if (existsSync(defaultConfigPath)) {
     logger.info('Loading configuration from config.json');
@@ -50,26 +55,57 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<AppCo
     const content = await file.text();
     try {
       const parsed = JSON.parse(content);
-      return validateAppConfig(parsed);
+      const merged = mergeWithEnv(parsed, envConfig);
+      return validateAppConfig(merged);
     } catch (e: unknown) {
       if (e instanceof ConfigError) throw e;
       throw new ConfigError(`Failed to parse config.json: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
-  // 4. Try building config from environment variables (.env is auto-loaded by Bun)
-  const envConfig = buildConfigFromEnv();
-  if (envConfig) {
+  // 4. Configuration from environment variables (HOYOLAB_ACCOUNTS in .env)
+  if (envConfig && Array.isArray(envConfig.profiles) && envConfig.profiles.length > 0) {
     logger.info('Loading configuration from environment variables (.env)');
     return validateAppConfig(envConfig);
   }
 
   throw new ConfigError(
-    'No configuration found! Please create a "config.json" file (see config.example.json) or set environment variables in ".env".'
+    'No valid configuration found! Please create a "config.json" file (see config.example.json) or set "HOYOLAB_ACCOUNTS" in ".env".'
   );
 }
 
-function buildConfigFromEnv(): Record<string, unknown> | null {
+/**
+ * Merge parsed file configuration with environment variables (.env).
+ * File values take precedence if explicitly provided, with .env providing secrets & notifications.
+ */
+function mergeWithEnv(
+  fileConfig: Record<string, unknown>,
+  envConfig: Record<string, unknown>
+): Record<string, unknown> {
+  const merged: Record<string, unknown> = {
+    ...envConfig,
+    ...fileConfig,
+  };
+
+  // Ensure notification objects merge cleanly
+  if (fileConfig.discord || envConfig.discord) {
+    merged.discord = fileConfig.discord ?? envConfig.discord;
+  }
+  if (fileConfig.telegram || envConfig.telegram) {
+    merged.telegram = fileConfig.telegram ?? envConfig.telegram;
+  }
+  if (fileConfig.smtp || envConfig.smtp) {
+    merged.smtp = fileConfig.smtp ?? envConfig.smtp;
+  }
+  if (fileConfig.webhook || envConfig.webhook) {
+    merged.webhook = fileConfig.webhook ?? envConfig.webhook;
+  }
+
+  return merged;
+}
+
+function buildConfigFromEnv(): Record<string, unknown> {
+  const rawConfig: Record<string, unknown> = {};
   const profiles: Record<string, unknown>[] = [];
 
   // Check for HOYOLAB_ACCOUNTS JSON string
@@ -84,36 +120,9 @@ function buildConfigFromEnv(): Record<string, unknown> | null {
     }
   }
 
-  // Check for single account env vars
-  if (process.env.HOYOLAB_TOKEN || process.env.HOYOLAB_COOKIE) {
-    const token = process.env.HOYOLAB_TOKEN || process.env.HOYOLAB_COOKIE || '';
-    const accountName = process.env.HOYOLAB_ACCOUNT_NAME || 'Primary Account';
-    const gamesEnv = process.env.HOYOLAB_GAMES; // e.g. "genshin,hsr,zzz"
-
-    const profile: Record<string, unknown> = {
-      accountName,
-      token,
-    };
-
-    if (gamesEnv) {
-      const gameList = gamesEnv.split(',').map((g) => g.trim().toLowerCase());
-      profile.genshin = gameList.includes('genshin') || gameList.includes('gi');
-      profile.honkai_star_rail = gameList.includes('star_rail') || gameList.includes('hsr') || gameList.includes('honkai_star_rail');
-      profile.honkai_3 = gameList.includes('honkai_3') || gameList.includes('hi3') || gameList.includes('honkai_impact_3rd');
-      profile.tears_of_themis = gameList.includes('themis') || gameList.includes('tot') || gameList.includes('tears_of_themis');
-      profile.zenless_zone_zero = gameList.includes('zzz') || gameList.includes('zenless_zone_zero');
-    }
-
-    profiles.push(profile);
+  if (profiles.length > 0) {
+    rawConfig.profiles = profiles;
   }
-
-  if (profiles.length === 0) {
-    return null;
-  }
-
-  const rawConfig: Record<string, unknown> = {
-    profiles,
-  };
 
   // Delay Range
   if (process.env.DELAY_MIN_MS && process.env.DELAY_MAX_MS) {
@@ -132,7 +141,8 @@ function buildConfigFromEnv(): Record<string, unknown> | null {
     rawConfig.requestTimeoutMs = parseInt(process.env.REQUEST_TIMEOUT_MS, 10);
   }
   if (process.env.FETCH_REWARD_DETAILS !== undefined) {
-    rawConfig.fetchRewardDetails = process.env.FETCH_REWARD_DETAILS === 'true' || process.env.FETCH_REWARD_DETAILS === '1';
+    rawConfig.fetchRewardDetails =
+      process.env.FETCH_REWARD_DETAILS === 'true' || process.env.FETCH_REWARD_DETAILS === '1';
   }
 
   // Discord
@@ -165,7 +175,9 @@ function buildConfigFromEnv(): Record<string, unknown> | null {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
       from: process.env.SMTP_FROM || process.env.SMTP_USER,
-      to: process.env.SMTP_TO.includes(',') ? process.env.SMTP_TO.split(',').map((s) => s.trim()) : process.env.SMTP_TO,
+      to: process.env.SMTP_TO.includes(',')
+        ? process.env.SMTP_TO.split(',').map((s) => s.trim())
+        : process.env.SMTP_TO,
       subjectPrefix: process.env.SMTP_SUBJECT_PREFIX,
       notifyOn: process.env.SMTP_NOTIFY_ON,
     };

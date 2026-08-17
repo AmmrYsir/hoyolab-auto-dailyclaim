@@ -4,7 +4,9 @@ export type NotificationPolicy = 'always' | 'on_error' | 'on_claim';
 
 export interface AccountProfile {
   accountName: string;
-  token: string;
+  ltoken_v2?: string;
+  ltuid_v2?: string | number;
+  token: string; // Guaranteed populated by validator
   games?: Partial<Record<GameKey, boolean>>;
   genshin?: boolean;
   honkai_star_rail?: boolean;
