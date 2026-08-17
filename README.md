@@ -120,9 +120,6 @@ The project follows a clean separation of concerns:
 
 ### `.env` (Secrets, Notifications & Runtime Settings)
 ```bash
-# Multi-Account JSON array (alternative to config.json)
-# HOYOLAB_ACCOUNTS='[{"accountName":"Main","ltoken_v2":"...","ltuid_v2":"...","genshin":true}]'
-
 # Runtime Settings (Optional overrides)
 DELAY_MIN_MS=1500
 DELAY_MAX_MS=3000
