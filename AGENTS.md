@@ -20,7 +20,12 @@ This document provides architectural standards, conventions, and operational wor
    - Always route log strings and payload debug dumps through `src/utils/sanitizer.ts`.
    - Never write credentials or sensitive data to disk or untracked temporary files.
 
-4. **Modular Domain Layout**:
+4. **Configuration Architecture & Separation of Concerns**:
+   - **`config.json`**: Contains **only** the account profiles catalog (`profiles: [...]`) with explicit `ltoken_v2` and `ltuid_v2` fields.
+   - **`.env`**: Contains all **infrastructure secrets & notifications** (`DISCORD_*`, `TELEGRAM_*`, `SMTP_*`, `WEBHOOK_*`), **runtime tunables** (`DELAY_MIN_MS`, `DELAY_MAX_MS`, `RETRY_COUNT`, `REQUEST_TIMEOUT_MS`, `FETCH_REWARD_DETAILS`), and environment accounts `HOYOLAB_ACCOUNTS`.
+   - `src/config/loader.ts` automatically merges `config.json` profiles with `.env` settings.
+
+5. **Modular Domain Layout**:
    ```
    src/
    ├── types/          # Central type definitions (game, config, hoyolab, notification)

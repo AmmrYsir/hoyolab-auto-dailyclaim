@@ -15,6 +15,10 @@ bun run typecheck        # Type check via tsc --noEmit
 ## Architecture & Conventions
 - **Runtime**: Bun `>= 1.3.0`.
 - **Zero Runtime Dependencies**: Strictly use Bun built-in APIs (`fetch`, `bun:test`, `Bun.file`, `node:net`, `node:tls`). Do NOT install external runtime npm packages.
+- **Configuration Model**:
+  - `config.json`: Contains **only** `profiles: [...]` with separate `ltoken_v2` and `ltuid_v2` fields.
+  - `.env`: Contains all secrets, notifications (`DISCORD_*`, `TELEGRAM_*`, `SMTP_*`, `WEBHOOK_*`), runtime settings (`DELAY_MIN_MS`, `DELAY_MAX_MS`, `RETRY_COUNT`, `REQUEST_TIMEOUT_MS`), and `HOYOLAB_ACCOUNTS`.
+  - `src/config/loader.ts` automatically merges `config.json` profiles with `.env` settings.
 - **Security & Masking**: Never print raw cookies or webhook URLs. Always use `sanitizeText()` from `src/utils/sanitizer.ts`.
 - **Error Handling**: HoYoLAB retcodes are mapped to strongly-typed `ClaimStatus` in `src/services/hoyolab-client.ts`:
   - `0`: SUCCESS
