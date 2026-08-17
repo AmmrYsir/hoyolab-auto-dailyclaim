@@ -26,9 +26,7 @@ jobs:
       - name: Run Daily Check-In
         env:
           HOYOLAB_CONFIG_JSON: ${{ secrets.HOYOLAB_CONFIG_JSON }}
-          HOYOLAB_TOKEN: ${{ secrets.HOYOLAB_TOKEN }}
-          HOYOLAB_ACCOUNT_NAME: ${{ secrets.HOYOLAB_ACCOUNT_NAME }}
-          HOYOLAB_GAMES: ${{ secrets.HOYOLAB_GAMES }}
+          HOYOLAB_ACCOUNTS: ${{ secrets.HOYOLAB_ACCOUNTS }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_PING_USER_ID: ${{ secrets.DISCORD_PING_USER_ID }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -39,4 +37,5 @@ jobs:
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           SMTP_FROM: ${{ secrets.SMTP_FROM }}
           SMTP_TO: ${{ secrets.SMTP_TO }}
+          WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
         run: bun run start

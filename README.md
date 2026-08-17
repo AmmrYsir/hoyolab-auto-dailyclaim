@@ -30,7 +30,7 @@
 ## ✨ Features
 
 - **🚀 Ultra-Lightweight & Fast**: Built for [Bun](https://bun.com) with **zero external runtime dependencies**.
-- **👥 Multi-Account Support**: Manage and claim rewards for multiple HoYoLAB accounts in a single run.
+- **👥 Multi-Account Support**: Manage and claim rewards for multiple HoYoLAB accounts in a single run with explicit `ltoken_v2` and `ltuid_v2` separation.
 - **🎁 Reward & Streak Details**: Automatically retrieves claimed reward names (e.g. *Primogems x20*, *Stellar Jade x20*, *Polychrome x20*) and your monthly check-in streak day.
 - **🛡️ Security & Privacy First**: Built-in credential sanitizer automatically masks tokens, cookies, webhooks, and passwords in logs, debug dumps, and notifications.
 - **🤖 Anti-Detection Timing**: Configurable randomized jitter and delay intervals between requests to emulate natural user activity.
@@ -54,14 +54,8 @@ HoYoLAB uses `HttpOnly` security cookies. Follow these steps to obtain your `lto
 4. Select the **Application** tab (or **Storage** in Firefox).
 5. On the left sidebar under **Cookies**, click on `https://act.hoyolab.com` or `https://hoyolab.com`.
 6. Locate and copy the values for:
-   - `ltoken_v2`
-   - `ltuid_v2`
-7. Combine them into the token string:
-   ```text
-   ltoken_v2=v2_CANARIAXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX3406; ltuid_v2=26XXXXX20;
-   ```
-
-*(You can also copy the entire `Cookie` header from any network request under the **Network** tab).*
+   - `ltoken_v2`: e.g. `v2_CANARIAXXXXXXXXXXXXXXXXXXXXXXXXXXXXX3406`
+   - `ltuid_v2`: e.g. `26XXXXX20`
 
 ---
 
@@ -81,15 +75,17 @@ bun install
 ```
 
 ### 3. Configure
-Copy the configuration template:
+Copy the configuration templates:
 ```bash
 cp config.example.json config.json
+cp .env.example .env
 ```
-Edit `config.json` with your credentials and notification settings.
+- Define your account profiles in `config.json`.
+- Configure your notification webhooks/credentials in `.env`.
 
 ### 4. Run
 ```bash
-# Test without claiming
+# Test without claiming (dry-run)
 bun run start --dry-run
 
 # Run check-in
@@ -98,54 +94,69 @@ bun run start
 
 ---
 
-## ⚙️ Configuration Options
+## ⚙️ Configuration Architecture
 
-You can configure the application using either **`config.json`** or **environment variables (`.env`)**.
+The project follows a clean separation of concerns:
+- **`config.json`**: Holds **only** account profiles & game toggles.
+- **`.env`**: Holds all **infrastructure secrets, notification channels & runtime tunables**.
 
-### `config.json` Example
+### `config.json` (Accounts Catalog)
 ```json
 {
   "profiles": [
     {
-      "accountName": "MyAccount",
-      "token": "ltoken_v2=v2_CANARIA...; ltuid_v2=26...;",
+      "accountName": "MainAccount",
+      "ltoken_v2": "v2_CANARIAXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX3406",
+      "ltuid_v2": "26XXXXX20",
       "genshin": true,
       "honkai_star_rail": true,
       "zenless_zone_zero": true,
       "honkai_3": false,
       "tears_of_themis": false
     }
-  ],
-  "delayRangeMs": [1500, 3000],
-  "retryCount": 2,
-  "requestTimeoutMs": 10000,
-  "fetchRewardDetails": true,
-  "discord": {
-    "enabled": true,
-    "webhookUrl": "https://discord.com/api/webhooks/...",
-    "pingUserId": "20000080000000040",
-    "notifyOn": "always"
-  },
-  "telegram": {
-    "enabled": false,
-    "botToken": "1234567890:AAA...",
-    "chatId": "123456780",
-    "notifyOn": "always"
-  },
-  "smtp": {
-    "enabled": false,
-    "host": "smtp.gmail.com",
-    "port": 587,
-    "user": "your_email@gmail.com",
-    "pass": "your_app_password",
-    "from": "your_email@gmail.com",
-    "to": "recipient@example.com",
-    "notifyOn": "always"
-  }
+  ]
 }
 ```
 
-### Notification Policies (`notifyOn` / `notify_mode`)
+### `.env` (Secrets, Notifications & Runtime Settings)
+```bash
+# Multi-Account JSON array (alternative to config.json)
+# HOYOLAB_ACCOUNTS='[{"accountName":"Main","ltoken_v2":"...","ltuid_v2":"...","genshin":true}]'
+
+# Runtime Settings (Optional overrides)
+DELAY_MIN_MS=1500
+DELAY_MAX_MS=3000
+RETRY_COUNT=2
+REQUEST_TIMEOUT_MS=10000
+FETCH_REWARD_DETAILS=true
+LOG_LEVEL=info
+
+# Discord Notifications
+DISCORD_NOTIFY_ENABLED=true
+DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
+DISCORD_PING_USER_ID="20000080000000040"
+DISCORD_NOTIFY_ON="always" # "always" | "on_error" | "on_claim"
+
+# Telegram Notifications
+TELEGRAM_NOTIFY_ENABLED=false
+TELEGRAM_BOT_TOKEN="1234567890:AAAAAAAAAAAAAAAAAAAA_BBBBBBBBBBBBBB"
+TELEGRAM_CHAT_ID="123456780"
+TELEGRAM_NOTIFY_ON="always"
+
+# SMTP Email Notifications
+SMTP_NOTIFY_ENABLED=false
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER="your_email@gmail.com"
+SMTP_PASS="your_app_password"
+SMTP_FROM="your_email@gmail.com"
+SMTP_TO="recipient@example.com"
+SMTP_SUBJECT_PREFIX="[HoYoLAB Claim]"
+SMTP_NOTIFY_ON="always"
+```
+
+### Notification Policies (`DISCORD_NOTIFY_ON`, `TELEGRAM_NOTIFY_ON`, etc.)
 - `"always"` *(default)*: Sends notifications on every run.
 - `"on_error"`: Sends notifications only if an account fails or triggers a CAPTCHA.
 - `"on_claim"`: Sends notifications only when rewards are actively claimed.
@@ -158,8 +169,9 @@ You can configure the application using either **`config.json`** or **environmen
 <summary><b>💬 Discord Webhook Setup</b></summary>
 
 1. In Discord, go to **Server Settings** → **Integrations** → **Webhooks** → **New Webhook**.
-2. Copy the Webhook URL and paste it into `config.json` (`discord.webhookUrl`).
-3. *(Optional)* To get pinged when an error occurs, copy your Discord User ID (User Settings → Advanced → Enable Developer Mode → Right-click your profile → Copy User ID) and set `pingUserId`.
+2. Copy the Webhook URL and paste it into `.env` (`DISCORD_WEBHOOK_URL`).
+3. Set `DISCORD_NOTIFY_ENABLED=true`.
+4. *(Optional)* To get pinged when an error occurs, copy your Discord User ID (User Settings → Advanced → Enable Developer Mode → Right-click your profile → Copy User ID) and set `DISCORD_PING_USER_ID`.
 
 </details>
 
@@ -168,7 +180,7 @@ You can configure the application using either **`config.json`** or **environmen
 
 1. Message [@BotFather](https://t.me/botfather) on Telegram and send `/newbot` to create your bot and obtain your `botToken`.
 2. Message [@IDBot](https://t.me/myidbot) and send `/getid` to get your `chatId`.
-3. Fill `telegram.botToken` and `telegram.chatId` in `config.json`.
+3. Set `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, and `TELEGRAM_NOTIFY_ENABLED=true` in `.env`.
 
 </details>
 
@@ -176,7 +188,7 @@ You can configure the application using either **`config.json`** or **environmen
 <summary><b>📧 SMTP Email Setup</b></summary>
 
 1. Use your SMTP server credentials (e.g. Gmail App Passwords, Outlook, AWS SES, SendGrid).
-2. Set `smtp.host`, `smtp.port` (`587` for STARTTLS, `465` for SSL), `smtp.user`, `smtp.pass`, and `smtp.to`.
+2. Set `SMTP_HOST`, `SMTP_PORT` (`587` for STARTTLS, `465` for SSL), `SMTP_USER`, `SMTP_PASS`, `SMTP_TO`, and `SMTP_NOTIFY_ENABLED=true` in `.env`.
 3. For Gmail, generate an **App Password** at [Google Account Security](https://myaccount.google.com/apppasswords).
 
 </details>
@@ -190,7 +202,8 @@ This repository includes a pre-configured workflow in [`.github/workflows/daily-
 1. Fork this repository.
 2. In your repository, go to **Settings** → **Secrets and variables** → **Actions**.
 3. Create repository secrets:
-   - `HOYOLAB_CONFIG_JSON`: The entire contents of your `config.json` file.
+   - `HOYOLAB_CONFIG_JSON` (or `HOYOLAB_ACCOUNTS`): Your account JSON array.
+   - `DISCORD_WEBHOOK_URL`, `TELEGRAM_BOT_TOKEN`, etc. (for any enabled notifications).
 4. The workflow will automatically run everyday at **06:00 UTC** (14:00 UTC+8).
 
 ### 2. Docker & Docker Compose
