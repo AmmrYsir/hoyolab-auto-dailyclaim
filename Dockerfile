@@ -1,16 +1,11 @@
-# Ultra-lightweight Node.js container
-FROM node:24-alpine AS base
+FROM node:24-alpine
 WORKDIR /app
 
-# Enable pnpm via corepack
-RUN corepack enable
+ENV NODE_ENV=production
 
-# Install dependencies
-COPY package.json pnpm-lock.yaml tsconfig.json ./
-RUN pnpm install --frozen-lockfile --prod
+COPY --chown=node:node package.json ./
+COPY --chown=node:node src/ ./src/
 
-# Copy application source
-COPY src/ ./src/
+USER node
 
-# Run the daily claim
 CMD ["node", "src/index.ts"]

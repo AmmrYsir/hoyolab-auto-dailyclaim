@@ -3,7 +3,13 @@ services:
     build: .
     container_name: hoyolab-auto-dailyclaim
     restart: "no"
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ./config.json:/app/config.json:ro
     env_file:
-      - .env
+      - path: .env
+        required: false
