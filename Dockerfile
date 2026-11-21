@@ -1,13 +1,16 @@
-# Ultra-lightweight Bun container (~80MB)
-FROM oven/bun:1-alpine AS base
+# Ultra-lightweight Node.js container
+FROM node:24-alpine AS base
 WORKDIR /app
 
+# Enable pnpm via corepack
+RUN corepack enable
+
 # Install dependencies
-COPY package.json bun.lock tsconfig.json ./
-RUN bun install --frozen-lockfile --production
+COPY package.json pnpm-lock.yaml tsconfig.json ./
+RUN pnpm install --frozen-lockfile --prod
 
 # Copy application source
 COPY src/ ./src/
 
 # Run the daily claim
-CMD ["bun", "run", "src/index.ts"]
+CMD ["node", "src/index.ts"]

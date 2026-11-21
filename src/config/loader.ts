@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { AppConfig } from '../types/config.ts';
 import { validateAppConfig, ConfigError } from './schema.ts';
@@ -20,8 +21,7 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<AppCo
       throw new ConfigError(`Specified configuration file does not exist: ${explicitPath}`);
     }
     logger.info(`Loading configuration from ${options.configPath}`);
-    const file = Bun.file(explicitPath);
-    const content = await file.text();
+    const content = await readFile(explicitPath, 'utf8');
     try {
       const parsed = JSON.parse(content);
       const merged = mergeWithEnv(parsed, envConfig);
@@ -51,8 +51,7 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<AppCo
   const defaultConfigPath = resolve(cwd, 'config.json');
   if (existsSync(defaultConfigPath)) {
     logger.info('Loading configuration from config.json');
-    const file = Bun.file(defaultConfigPath);
-    const content = await file.text();
+    const content = await readFile(defaultConfigPath, 'utf8');
     try {
       const parsed = JSON.parse(content);
       const merged = mergeWithEnv(parsed, envConfig);

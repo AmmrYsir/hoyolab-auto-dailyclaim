@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 import { loadConfig } from './config/loader.ts';
 import { ClaimCoordinator } from './services/claimer.ts';
 import { NotificationManager } from './notifiers/index.ts';
@@ -13,8 +13,8 @@ function printHelp(): void {
 Automated, secure, and lightweight daily check-in rewards claimer.
 
 \x1b[1mUSAGE:\x1b[0m
-  bun run start [OPTIONS]
-  bun run src/index.ts [OPTIONS]
+  pnpm start [OPTIONS]
+  node src/index.ts [OPTIONS]
 
 \x1b[1mOPTIONS:\x1b[0m
   -c, --config <path>    Path to JSON configuration file (default: config.json)
@@ -24,10 +24,10 @@ Automated, secure, and lightweight daily check-in rewards claimer.
   -v, --version          Show version and exit
 
 \x1b[1mEXAMPLES:\x1b[0m
-  bun run start
-  bun run start --dry-run
-  bun run start --config my-custom-config.json
-  bun run start --validate
+  pnpm start
+  pnpm dry-run
+  pnpm start -- --config my-custom-config.json
+  pnpm validate
 
 \x1b[1mDOCUMENTATION:\x1b[0m
   https://github.com/AmmrYsir/hoyolab-auto-dailyclaim

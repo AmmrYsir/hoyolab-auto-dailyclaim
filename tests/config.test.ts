@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 import {
   ConfigError,
   normalizeCookieString,
@@ -19,7 +20,7 @@ describe('Config Schema & Normalization', () => {
     `;
     const normalized = normalizeCookieString(raw);
 
-    expect(normalized).toBe('ltoken_v2=v2_CANARIA3406; ltuid_v2=260000000; account_mid_v2=mid123');
+    assert.strictEqual(normalized, 'ltoken_v2=v2_CANARIA3406; ltuid_v2=260000000; account_mid_v2=mid123');
   });
 
   it('should validate account profile with separate ltoken_v2 and ltuid_v2 fields', () => {
@@ -32,12 +33,12 @@ describe('Config Schema & Normalization', () => {
     };
     const profile = validateAccountProfile(rawProfile, 0);
 
-    expect(profile.accountName).toBe('TravelerMain');
-    expect(profile.ltoken_v2).toBe('v2_CANARIA3406');
-    expect(profile.ltuid_v2).toBe('260000000');
-    expect(profile.token).toBe('ltoken_v2=v2_CANARIA3406; ltuid_v2=260000000;');
-    expect(profile.genshin).toBe(true);
-    expect(profile.honkai_star_rail).toBe(true);
+    assert.strictEqual(profile.accountName, 'TravelerMain');
+    assert.strictEqual(profile.ltoken_v2, 'v2_CANARIA3406');
+    assert.strictEqual(profile.ltuid_v2, '260000000');
+    assert.strictEqual(profile.token, 'ltoken_v2=v2_CANARIA3406; ltuid_v2=260000000;');
+    assert.strictEqual(profile.genshin, true);
+    assert.strictEqual(profile.honkai_star_rail, true);
   });
 
   it('should validate legacy account profile with combined token string', () => {
@@ -47,13 +48,13 @@ describe('Config Schema & Normalization', () => {
     };
     const profile = validateAccountProfile(rawProfile, 0);
 
-    expect(profile.accountName).toBe('LegacyUser');
-    expect(profile.ltoken_v2).toBe('v2_abc');
-    expect(profile.ltuid_v2).toBe('123');
-    expect(profile.token).toBe('ltoken_v2=v2_abc; ltuid_v2=123');
-    expect(profile.genshin).toBe(true);
-    expect(profile.honkai_star_rail).toBe(true);
-    expect(profile.zenless_zone_zero).toBe(true);
+    assert.strictEqual(profile.accountName, 'LegacyUser');
+    assert.strictEqual(profile.ltoken_v2, 'v2_abc');
+    assert.strictEqual(profile.ltuid_v2, '123');
+    assert.strictEqual(profile.token, 'ltoken_v2=v2_abc; ltuid_v2=123');
+    assert.strictEqual(profile.genshin, true);
+    assert.strictEqual(profile.honkai_star_rail, true);
+    assert.strictEqual(profile.zenless_zone_zero, true);
   });
 
   it('should support game aliases (hsr, zzz, gi, hi3)', () => {
@@ -67,19 +68,19 @@ describe('Config Schema & Normalization', () => {
     };
     const profile = validateAccountProfile(rawProfile, 0);
 
-    expect(profile.honkai_star_rail).toBe(true);
-    expect(profile.zenless_zone_zero).toBe(true);
-    expect(profile.genshin).toBe(false);
+    assert.strictEqual(profile.honkai_star_rail, true);
+    assert.strictEqual(profile.zenless_zone_zero, true);
+    assert.strictEqual(profile.genshin, false);
   });
 
   it('should throw ConfigError if credentials are missing or invalid', () => {
-    expect(() => {
+    assert.throws(() => {
       validateAccountProfile({ accountName: 'NoToken' }, 0);
-    }).toThrow(ConfigError);
+    }, ConfigError);
 
-    expect(() => {
+    assert.throws(() => {
       validateAccountProfile({ accountName: 'BadToken', token: 'invalid_cookie_string' }, 0);
-    }).toThrow(ConfigError);
+    }, ConfigError);
   });
 
   it('should validate Discord config', () => {
@@ -90,10 +91,10 @@ describe('Config Schema & Normalization', () => {
       notifyOn: 'on_error',
     });
 
-    expect(valid).toBeDefined();
-    expect(valid?.enabled).toBe(true);
-    expect(valid?.pingUserId).toBe('987654321');
-    expect(valid?.notifyOn).toBe('on_error');
+    assert.notStrictEqual(valid, undefined);
+    assert.strictEqual(valid?.enabled, true);
+    assert.strictEqual(valid?.pingUserId, '987654321');
+    assert.strictEqual(valid?.notifyOn, 'on_error');
   });
 
   it('should validate Telegram config', () => {
@@ -103,9 +104,9 @@ describe('Config Schema & Normalization', () => {
       chatId: '987654321',
     });
 
-    expect(valid).toBeDefined();
-    expect(valid?.botToken).toBe('123456:ABC-DEF');
-    expect(valid?.notifyOn).toBe('always');
+    assert.notStrictEqual(valid, undefined);
+    assert.strictEqual(valid?.botToken, '123456:ABC-DEF');
+    assert.strictEqual(valid?.notifyOn, 'always');
   });
 
   it('should validate SMTP config', () => {
@@ -120,11 +121,11 @@ describe('Config Schema & Normalization', () => {
       notifyOn: 'always',
     });
 
-    expect(valid).toBeDefined();
-    expect(valid?.host).toBe('smtp.gmail.com');
-    expect(valid?.port).toBe(587);
-    expect(valid?.secure).toBe(false);
-    expect(valid?.to).toEqual(['friend@example.com']);
+    assert.notStrictEqual(valid, undefined);
+    assert.strictEqual(valid?.host, 'smtp.gmail.com');
+    assert.strictEqual(valid?.port, 587);
+    assert.strictEqual(valid?.secure, false);
+    assert.deepStrictEqual(valid?.to, ['friend@example.com']);
   });
 
   it('should validate full AppConfig', () => {
@@ -144,10 +145,10 @@ describe('Config Schema & Normalization', () => {
     };
 
     const validated = validateAppConfig(fullConfig);
-    expect(validated.profiles.length).toBe(1);
-    expect(validated.delayRangeMs).toEqual([2000, 4000]);
-    expect(validated.retryCount).toBe(3);
-    expect(validated.requestTimeoutMs).toBe(8000);
+    assert.strictEqual(validated.profiles.length, 1);
+    assert.deepStrictEqual(validated.delayRangeMs, [2000, 4000]);
+    assert.strictEqual(validated.retryCount, 3);
+    assert.strictEqual(validated.requestTimeoutMs, 8000);
   });
 
   it('should load multi-account configuration from HOYOLAB_ACCOUNTS environment variable', async () => {
@@ -168,10 +169,10 @@ describe('Config Schema & Normalization', () => {
     ]);
 
     try {
-      const config = await loadConfig({ cwd: import.meta.dir });
-      expect(config.profiles.length).toBe(2);
-      expect(config.profiles[0]?.accountName).toBe('EnvAccount1');
-      expect(config.profiles[1]?.accountName).toBe('EnvAccount2');
+      const config = await loadConfig({ cwd: import.meta.dirname });
+      assert.strictEqual(config.profiles.length, 2);
+      assert.strictEqual(config.profiles[0]?.accountName, 'EnvAccount1');
+      assert.strictEqual(config.profiles[1]?.accountName, 'EnvAccount2');
     } finally {
       if (prevAccounts !== undefined) {
         process.env.HOYOLAB_ACCOUNTS = prevAccounts;

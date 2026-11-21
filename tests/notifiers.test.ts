@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 import { DiscordNotifier } from '../src/notifiers/discord.ts';
 import { TelegramNotifier } from '../src/notifiers/telegram.ts';
 import { SmtpNotifier } from '../src/notifiers/smtp.ts';
@@ -76,9 +77,9 @@ describe('Notifiers Formatting & Policies', () => {
       notifyOn: 'on_error',
     });
 
-    expect(discord.isEnabled).toBe(true);
-    expect(discord.shouldNotify(mockSummary)).toBe(false);
-    expect(discord.shouldNotify(mockFailureSummary)).toBe(true);
+    assert.strictEqual(discord.isEnabled, true);
+    assert.strictEqual(discord.shouldNotify(mockSummary), false);
+    assert.strictEqual(discord.shouldNotify(mockFailureSummary), true);
   });
 
   it('TelegramNotifier should respect notification policy', () => {
@@ -89,8 +90,8 @@ describe('Notifiers Formatting & Policies', () => {
       notifyOn: 'always',
     });
 
-    expect(telegram.isEnabled).toBe(true);
-    expect(telegram.shouldNotify(mockSummary)).toBe(true);
+    assert.strictEqual(telegram.isEnabled, true);
+    assert.strictEqual(telegram.shouldNotify(mockSummary), true);
   });
 
   it('SmtpNotifier should build appropriate subject lines based on status', () => {
@@ -106,7 +107,7 @@ describe('Notifiers Formatting & Policies', () => {
       notifyOn: 'always',
     });
 
-    expect(smtp.isEnabled).toBe(true);
-    expect(smtp.shouldNotify(mockSummary)).toBe(true);
+    assert.strictEqual(smtp.isEnabled, true);
+    assert.strictEqual(smtp.shouldNotify(mockSummary), true);
   });
 });

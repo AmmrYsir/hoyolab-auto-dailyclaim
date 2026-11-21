@@ -1,4 +1,5 @@
-import { describe, expect, it, afterEach } from 'bun:test';
+import { describe, it, afterEach } from 'node:test';
+import assert from 'node:assert/strict';
 import { HoYoLabClient } from '../src/services/hoyolab-client.ts';
 
 describe('HoYoLabClient', () => {
@@ -57,11 +58,11 @@ describe('HoYoLabClient', () => {
     });
 
     const result = await client.claimGame('genshin');
-    expect(result.status).toBe('SUCCESS');
-    expect(result.retcode).toBe(0);
-    expect(result.reward?.name).toBe('Primogems');
-    expect(result.reward?.count).toBe(60);
-    expect(result.signDays).toBe(15);
+    assert.strictEqual(result.status, 'SUCCESS');
+    assert.strictEqual(result.retcode, 0);
+    assert.strictEqual(result.reward?.name, 'Primogems');
+    assert.strictEqual(result.reward?.count, 60);
+    assert.strictEqual(result.signDays, 15);
   });
 
   it('should handle already claimed response (retcode -5003)', async () => {
@@ -112,10 +113,10 @@ describe('HoYoLabClient', () => {
     });
 
     const result = await client.claimGame('honkai_star_rail');
-    expect(result.status).toBe('ALREADY_CLAIMED');
-    expect(result.retcode).toBe(-5003);
-    expect(result.signDays).toBe(10);
-    expect(result.reward?.name).toBe('Stellar Jade');
+    assert.strictEqual(result.status, 'ALREADY_CLAIMED');
+    assert.strictEqual(result.retcode, -5003);
+    assert.strictEqual(result.signDays, 10);
+    assert.strictEqual(result.reward?.name, 'Stellar Jade');
   });
 
   it('should detect CAPTCHA risk blocking (gt_result is_risk = true)', async () => {
@@ -139,8 +140,8 @@ describe('HoYoLabClient', () => {
     const client = new HoYoLabClient('ltoken_v2=v2_abc; ltuid_v2=123;');
     const result = await client.claimGame('zenless_zone_zero');
 
-    expect(result.status).toBe('CAPTCHA_TRIGGERED');
-    expect(result.message).toContain('CAPTCHA');
+    assert.strictEqual(result.status, 'CAPTCHA_TRIGGERED');
+    assert.ok(result.message.includes('CAPTCHA'));
   });
 
   it('should detect expired or invalid token (retcode -100)', async () => {
@@ -157,7 +158,7 @@ describe('HoYoLabClient', () => {
     const client = new HoYoLabClient('ltoken_v2=v2_expired; ltuid_v2=123;');
     const result = await client.claimGame('genshin');
 
-    expect(result.status).toBe('INVALID_TOKEN');
-    expect(result.message).toContain('expired or is invalid');
+    assert.strictEqual(result.status, 'INVALID_TOKEN');
+    assert.ok(result.message.includes('expired or is invalid'));
   });
 });
